@@ -1,0 +1,26 @@
+{
+  "tokenAmount": {
+    "Variable Name": "tokenAmount",
+    "Title": "Song Request Tip Tokens",
+    "Description": "Number of tokens needed to request a song",
+    "Type": "Number",
+    "Default": 0,
+    "Min": 0
+  },
+  "reqsGivenPerTip": {
+    "Variable Name": "reqsGivenPerTip",
+    "Title": "Song Requests per Tip",
+    "Description": "Number of song requests credits a user is given per song req tip",
+    "Type": "Number",
+    "Default": 1,
+    "Min": 1,
+    "Max": 100
+  },
+  "modsHavePriv": {
+    "Variable Name": "modsHavePriv",
+    "Title": "Mods Can Edit the Queue",
+    "Description": "Moderators are allowed to modify the queue",
+    "Type": "Boolean",
+    "Default": false
+  }
+}
