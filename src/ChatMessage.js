@@ -1,11 +1,15 @@
-const hasPriv = ($user.username === $room.owner) || ($user.isMod && modsHavePriv)
+const hasPriv = ($user.username === $room.owner) || ($user.isMod && $settings.modsHavePriv)
 const cmd = parseCmdFromMsg($message.body)
 const cmdArgs = parseCmdArgsFromMsg($message.body)
 
 let resp = ''
 switch (cmd) {
   case Command.Show:
-    $room.sendNotice(queueToMsgFormat(getQueue()))
+    resp = queueToMsgFormat(getQueue())
+    if (hasPriv) {
+      $room.sendNotice(resp)
+      resp = ''
+    }
     break
   case Command.Add:
     resp = addUserReq($user.username, cmdArgs[0], hasPriv)
@@ -19,20 +23,17 @@ switch (cmd) {
   case Command.GiveReqCredits:
     resp = giveUserReqCredits(cmdArgs[0], cmdArgs[1], hasPriv)
     break
+  case Command.ShowReqCredits:
+    resp = showUserReqCredits($user.username, cmdArgs[0], hasPriv)
+    break
   case Command.ShowTipCost:
-    resp = `Tip ${tokenAmout} token${tokenAmout === 1 ? '' : 's'} to request a song`
+    resp = `Tip ${$settings.tokenAmout} token${$settings.tokenAmout === 1 ? '' : 's'} to request a song`
     break
   case Command.Help:
-    resp = `Music Queue Usage:`
+    resp = `Music Queue Usage: todo`
     break
-}
-
-if (autoAddSong && canUserAddReq($user.username) && $message.body.match(songRecMsgPattern)) {
-  resp = addUserReq($user.username, $message.body, hasPriv)
 }
 
 if (resp) {
   $room.sendNotice(resp, { toUsername: $user.username })
 }
-
-

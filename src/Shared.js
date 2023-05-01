@@ -1,20 +1,20 @@
-const { autoAddSong, tokenAmout, reqsGivenPerTip, modsHavePriv } = $settings
 const songKeyPrefix = 'queue-'
 const songRecMsgPattern = /.* (-|by) .*/g
-const queueCmd = $settings.queueCmd.trim()
+const queueCmd = '/(queue|q)'
 const Command = {
   Show: 'show',
   Add: 'add',
   Remove: 'remove',
   Clear: 'clear',
   ShowTipCost: 'tip',
-  GiveReqCredits: 'credits',
+  GiveReqCredits: 'give-credits',
+  ShowReqCredits: 'credits',
   Help: 'help',
 }
 
 function parseCmdFromMsg(messageBody) {
   if (!messageBody.match(new RegExp(`^${queueCmd}`, 'gi'))) {
-    return
+    return ''
   }
   if (messageBody.match(new RegExp(`^${queueCmd}$`, 'gi'))) {
     return Command.Show
@@ -28,22 +28,27 @@ function parseCmdFromMsg(messageBody) {
   if (messageBody.match(new RegExp(`^${queueCmd} (add|ad|a)`, 'gi'))) {
     return Command.Add
   }
-  if (messageBody.match(new RegExp(`^${queueCmd} (tip|t|cost|c|tipcost|tip-cost)`, 'gi'))) {
+  if (messageBody.match(new RegExp(`^${queueCmd} (tip|t|cost|tipcost|tip-cost)`, 'gi'))) {
     return Command.ShowTipCost
   }
-  if (messageBody.match(new RegExp(`^${queueCmd} (give|g|credit|gc)`, 'gi'))) {
+  if (messageBody.match(new RegExp(`^${queueCmd} (give|g|gc)`, 'gi'))) {
     return Command.GiveReqCredits
+  }
+  if (messageBody.match(new RegExp(`^${queueCmd} (credits|c)`, 'gi'))) {
+    return Command.ShowReqCredits
   }
   if (messageBody.match(new RegExp(`^${queueCmd} (help|h)`, 'gi'))) {
     return Command.Help
   }
+  return ''
 }
 
 function parseCmdArgsFromMsg(msgBody) {
-  if (msgBody.match(new RegExp(`^${queueCmd}`, 'gi'))) {
-    const msgParts = msgBody.split(' ')
-    return msgParts.slice(2)
+  if (!msgBody.match(new RegExp(`^${queueCmd}`, 'gi'))) {
+    return []
   }
+  const msgParts = msgBody.split(' ')
+  return msgParts.slice(2)
 }
 
 function parseIndexFromInput(userInput) {
@@ -62,21 +67,15 @@ function queueToMsgFormat(queue) {
 }
 
 function canUserAddReq(username, hasPriv) {
-  if (!tokenAmout || hasPriv) {
+  if (!$settings.tokenAmout || hasPriv) {
     return true
   }
-  let userReqs = 0
-  try {
-    userReqs = $kv.get(username)
-  } catch (e) {
-    // ts-lint-ignore no-empty (probably incorrect tslint syntax but this comment's existence fixes the warning anyway lol)
-  }
-  return userReqs > 0
+  return getUserReqCredits(username) > 0
 }
 
 function addUserReq(username, song, hasPriv) {
   if (!canUserAddReq(username, hasPriv)) {
-    return `You must first give a ${tokenAmout} token${tokenAmout === 1 ? '' : 's'} tip before requesting a song`
+    return `You must first give a ${$settings.tokenAmout} token${$settings.tokenAmout === 1 ? '' : 's'} tip before requesting a song`
   }
   if (!song) {
     return `Please include a song to request`
@@ -84,10 +83,10 @@ function addUserReq(username, song, hasPriv) {
   const time = (new Date).getTime()
   $kv.set(`${songKeyPrefix}${time}`, {
     ts: time,
-    username,
-    song,
+    username: formatUsernameKey(username),
+    song: song.trim(),
   })
-  $kv.decr(username)
+  $kv.decr(formatUsernameKey(username))
   return `${song} added to queue`
 }
 
@@ -117,7 +116,7 @@ function removeFromQueue(username, songNameOrPos, hasPriv) {
     if (!songItem) {
       return `Could find song to remove at position ${pos}`
     }
-    if ((songItem.username !== username) && !hasPriv) {
+    if ((songItem.username !== formatUsernameKey(username)) && !hasPriv) {
       return `Cannot remove song (${songItem.song}) because it was not added by you`
     }
     const success = $kv.remove(songItem.key)
@@ -141,15 +140,61 @@ function deleteQueue(hasPriv) {
   return 'Music queue cleared'
 }
 
-function giveUserReqCredits(username, credits, hasPriv) {
+function giveUserReqCredits(username, creditsArg, hasPriv) {
   if (!hasPriv) {
     return `Not permitted to give credits`
   }
-  try {
-    $kv.get(username)
-  } catch (e) {
-    $kv.set(username, 0)
+  const existingCredits = getUserReqCredits(username)
+  const additionalCredits = formatCredits(creditsArg) || $settings.reqsGivenPerTip
+  let newCredits = existingCredits + additionalCredits
+  if (newCredits < 0) {
+    newCredits = 0
   }
-  $kv.incr(username, credits || reqsGivenPerTip)
+  const success = setUserReqCredits(username, newCredits)
+  if (!success) {
+    return `app kv errro setting credits for ${username} to ${newCredits}`
+  }
+  return `Credits for ${username} set to ${newCredits}`
 }
 
+function showUserReqCredits(username, argUsername, hasPriv) {
+  if (formatUsernameKey(argUsername) && hasPriv) {
+    username = argUsername
+  }
+  const existingCredits = getUserReqCredits(username)
+  return `${username} has ${existingCredits} credit${existingCredits === 1 ? '' : 's'}`
+}
+
+// kv
+
+function formatUsernameKey(username) {
+  if (!username) {
+    return ''
+  }
+  return username.replace('@', '').trim()
+}
+
+function formatCredits(credits) {
+  if (!credits) {
+    return 0
+  }
+  const creditsInt = parseInt(credits, 10)
+  if (Number.isNaN(creditsInt)) {
+      return 0
+  }
+  return creditsInt
+}
+
+function getUserReqCredits(username) {
+  let existingCredits = 0
+  try {
+    existingCredits = $kv.get(formatUsernameKey(username))
+  } catch (e) {
+    //
+  }
+  return formatCredits(existingCredits)
+}
+
+function setUserReqCredits(username, credits) {
+  return $kv.set(formatUsernameKey(username), formatCredits(credits))
+}

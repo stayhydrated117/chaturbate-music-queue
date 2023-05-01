@@ -43,13 +43,26 @@ Notice: Zero by The Smashing Pumpkins removed from queue
 
 Remove all requests from queue (only room owner permitted, mods permitted with "Mods Can Edit" setting enabled)
 
+Example:
 ```
 /queue clear
 Notice: Music queue cleared
 ```
 
 ##### `/queue credit <username> [credits]`
-Give a user song request credits (optionally include the number of credits to give)
+Give a user song request credits. Default credit credit amount is the value of `reqsGivenPerTip` but can be changed by setting the additional `credits` argument. Negative values for `credits` will subtract credits from that user. Set a user's credits to `0` by providing any negative `credits` value larger than or equal to that user's current num of credits (e.g. user has `20` credits. both `/queue credit <user> -20`, and `/queue credit <user> -10000` will set that user's credits to `0`)
+
+Example:
+```
+/queue give testuser1
+Notice: Credits for testuser1 set to 1
+
+/queue give testuser1 3
+Notice: Credits for testuser1 set to 4
+
+/queue give testuser1 -10
+Notice: Credits for testuser1 set to 0
+```
 
 ##### `/queue cost`
 
