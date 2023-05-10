@@ -1,10 +1,11 @@
-# Chaturbate Music Queue App
+# Music Queue
+> Chaturbate music queue app
 
-Keep track of user song requests
+Keep track of user's song requests so you can focus on all the other types of requests 😉 Pairs well with "song request" tip rewards 🎶
 
 ## App Usage
 
-Add the "Music Queue" app to your channel on Chaturbate ([link](https://chaturbate.com/apps2/1/a1960a32-Music-Queue/)). Update the app settings and set "Song Request Tip Tokens" (`tokenAmout` variable in the code) to the appropriate token amount (tycically the same value as what you have the song request tip set to in your tip menu, if you have one). You and other users can then manage the queue with the following commands:
+Add the "Music Queue" app to your channel on Chaturbate ([link](https://chaturbate.com/apps2/1/a1960a32-Music-Queue/)).
 
 ### Commands
 
@@ -37,6 +38,17 @@ Example:
 ```
 /queue remove 1
 Notice: Zero by The Smashing Pumpkins removed from queue
+```
+
+
+##### `/queue edit <position in queue> <new song name>`
+
+Change the name of a song request in the queue.  Fails if user did not add that song or editing queue setting is disabled.
+
+Example:
+```
+/queue edit 2 don't fade away by beach fossils
+Notice: Song #2 changed from won't fade away by beach fossils to don't fade away by beach fossils
 ```
 
 ##### `/queue clear`
@@ -73,3 +85,9 @@ Example:
 /queue cost
 Notice: Tip 100 tokens to request a song
 ```
+
+### Settings
+
+- Set "Song Request Tip Tokens" to 0 to allow requesting songs without needing to tip
+- Allow for multiple song requests to be added per tip by updating "Song Requests per Tip"
+- Hide displaying which user the song was added by via setting "Show Who Added the Song Request" to False

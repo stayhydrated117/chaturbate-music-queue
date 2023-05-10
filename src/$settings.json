@@ -1,26 +1,68 @@
 {
-  "tokenAmount": {
-    "Variable Name": "tokenAmount",
-    "Title": "Song Request Tip Tokens",
-    "Description": "Number of tokens needed to request a song",
+  "reqTipNumTokens": {
+    "Variable Name": "reqTipNumTokens",
+    "Title": "Tip Tokens for Song Request ",
+    "Description": "Set to 0 to disable tipping requirement to add to queue",
     "Type": "Number",
-    "Default": 0,
+    "Default": 100,
     "Min": 0
   },
-  "reqsGivenPerTip": {
-    "Variable Name": "reqsGivenPerTip",
+  "reqCreditsGivenPerTip": {
+    "Variable Name": "reqCreditsGivenPerTip",
     "Title": "Song Requests per Tip",
     "Description": "Number of song requests credits a user is given per song req tip",
     "Type": "Number",
     "Default": 1,
     "Min": 1,
-    "Max": 100
+    "Max": 1000
   },
-  "modsHavePriv": {
-    "Variable Name": "modsHavePriv",
+  "showReqAddedBy": {
+    "Variable Name": "showReqAddedBy",
+    "Title": "Display Usernames",
+    "Description": "Show the song requester's username (except for anon tips)",
+    "Type": "Boolean",
+    "Default": true
+  },
+  "reqEditable": {
+    "Variable Name": "reqEditable",
+    "Title": "Allow Edits",
+    "Description": "Users can edit their song requests",
+    "Type": "Boolean",
+    "Default": false
+  },
+  "modsHaveQueuePriv": {
+    "Variable Name": "modsHaveQueuePriv",
     "Title": "Mods Can Edit the Queue",
     "Description": "Moderators are allowed to modify the queue",
     "Type": "Boolean",
     "Default": false
+  },
+  "modsHaveCreditPriv": {
+    "Variable Name": "modsHaveCreditPriv",
+    "Title": "Mods Can Edit Request Credits",
+    "Description": "Moderators can give/remove users' song request credits",
+    "Type": "Boolean",
+    "Default": false
+  },
+  "addRequestViaTipMsgEnabled": {
+    "Variable Name": "addRequestViaTipMsgEnabled",
+    "Title": "Add Song from Tip Message Enabled",
+    "Description": "Allow users to add their request by tip message",
+    "Type": "Boolean",
+    "Default": true
+  },
+  "addRequestViaChatMsgEnabled": {
+    "Variable Name": "addRequestViaChatMsgEnabled",
+    "Title": "Add Song from Chat Message Enabled",
+    "Description": "Next message the user sends after tipping will be their request",
+    "Type": "Boolean",
+    "Default": true
+  },
+  "addRequestViaCmdEnabled": {
+    "Variable Name": "addRequestViaCmdEnabled",
+    "Title": "Add Song from `/queue add` Command Enabled",
+    "Description": "Users may use the `/queue add` command (if they have tipped)",
+    "Type": "Boolean",
+    "Default": true
   }
 }

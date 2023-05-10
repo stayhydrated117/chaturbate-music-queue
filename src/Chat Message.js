@@ -1,6 +1,6 @@
-const messageBody = formatMsgBody($message.body)
-const cmd = parseCmdFromMsg(messageBody)
-const cmdArgs = parseCmdArgsFromMsg(cmd, messageBody)
+const msgBody = formatMsgBody($message.body)
+const cmd = msgParseCmd(msgBody)
+const cmdArgs = msgParseCmdArgs(cmd, msgBody)
 const {
   editQueuePriv: canEditQueue,
   editCreditsPriv: canEditCredits
@@ -11,7 +11,7 @@ let isNoticePublic = false
 
 if (cmd) {
   switch (cmd) {
-    case Command.Queue:
+    case Command.Show:
       noticeText = cmdGetQueue()
       isNoticePublic = canEditQueue
       break
@@ -26,7 +26,7 @@ if (cmd) {
       noticeText = cmdRemoveFromQueue($user.username, cmdArgs[0], canEditQueue)
       break
     case Command.Edit:
-      noticeText = cmdEditQueue($user.username, cmdArgs[0], cmdArgs[1], canEditQueue)
+      noticeText = cmdEditQueue($user.username, cmdArgs[0], cmdArgs.slice(1).join(' '), canEditQueue)
       break
     case Command.Clear:
       noticeText = cmdDeleteQueue(canEditQueue)
@@ -39,14 +39,13 @@ if (cmd) {
       noticeText = getTipCost()
       break
     case Command.Help:
-      noticeText = `Music Queue Usage: todo`
+      noticeText = cmdGetHelp(cmdArgs[0])
       break
   }
 }
-
 if (shouldCheckMsgForSong($user.username)) {
-  if (!cmd && isMsgValidSongRequest(messageBody)) {
-    noticeText = msgAddUserReq($user.username, messageBody)
+  if (!cmd && isMsgValidSongRequest(msgBody)) {
+    noticeText = msgAddUserReq($user.username, msgBody)
   }
   setCheckNextMsgForSong($user.username, false)
 }

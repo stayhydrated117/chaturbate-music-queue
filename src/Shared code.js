@@ -1,6 +1,6 @@
 const queueCmd = '/q(ueue)?'
 const Command = Object.freeze({
-  Queue: 'Queue',
+  Show: 'Show',
   Next: 'Next',
   Add: 'Add',
   Remove: 'Remove',
@@ -10,8 +10,9 @@ const Command = Object.freeze({
   Credits: 'Credits',
   Help: 'Help',
 })
-const songRecChatMsgPattern = /.* (-|by) .*/g
+const songRecChatMsgPattern = '.* (-|by) .*'
 const MAX_SONG_NAME_LENGTH = 500
+const MAX_CREDITS_PER_USER = 1000
 
 function formatMsgBody(messageBody) {
   if (Array.isArray(messageBody)) {
@@ -27,16 +28,20 @@ function formatUsername(username) {
   if (!username || typeof username !== 'string') {
     return ''
   }
-  return `${username}`.trim().replace(/^@/g, '')
+  return (
+    `${username}`
+      .trim()
+      .replace(/^@/g, '')
+  )
 }
 
 function formatCredits(credits) {
   const creditsInt = parseIntFromInput(credits)
-  return creditsInt > -1 ? creditsInt : 0
+  return creditsInt > -1 ? Math.min(creditsInt, MAX_CREDITS_PER_USER) : 0
 }
 
 function formatSongName(songName) {
-  if (!songName || typeof songName !== 'string') {
+  if (!songName) {
     songName = ''
   }
   return (
@@ -46,8 +51,8 @@ function formatSongName(songName) {
   )
 }
 
-function songToMsgFormat({ username, song, isAnon }) {
-  let songText = `${formatSongName(song)}`
+function songToMsgFormat({ username, song, isAnon }, noQuotes = false) {
+  let songText = `${noQuotes ? '' : '"'}${formatSongName(song)}${noQuotes ? '' : '"'}`
   if ($settings.showReqAddedBy && username && !isAnon) {
     songText = `${songText} (added by ${username})`
   }
@@ -57,49 +62,59 @@ function songToMsgFormat({ username, song, isAnon }) {
 function queueToMsgFormat(queue) {
   let queueMsgText = 'Music Queue:'
   queueMsgText += queue.reduce((msg, song, index) => (
-    `${msg}\n${index+1}. ${songToMsgFormat(song)}`
+    `${msg}\n${index+1}. ${songToMsgFormat(song, true)}`
   ), '') || ' (empty)'
   return queueMsgText
 }
 
-function parseCmdFromMsg(msgBody) {
-  if (!msgBody || typeof msgBody !== 'string') {
+function msgParseCmd(msgBody) {
+   if (!msgBody || typeof msgBody !== 'string') {
     return ''
   }
   if (!msgBody.match(new RegExp(`^${queueCmd}`, 'gi'))) {
     return ''
   }
-  if (msgBody.match(new RegExp(`^${queueCmd}( )?$`, 'gi'))) {
-    return Command.Queue
+  return parseCmd(msgBody) 
+}
+
+function parseCmd(msgBody) {
+  msgBody = (
+    formatMsgBody(msgBody)
+    .replace(new RegExp(`^${queueCmd}( )?`, 'gi'), '')
+    .trim()
+  )
+
+  if (msgBody.match(new RegExp(`^(s(how)?|l(s|ist)?)?( )?$`, 'gi'))) {
+    return Command.Show
   }
-  if (msgBody.match(new RegExp(`^${queueCmd} (n(ext)?( )?)$`, 'gi'))) {
+  if (msgBody.match(new RegExp(`^n(ext)?( )?$`, 'gi'))) {
     return Command.Next
   }
-  if (msgBody.match(new RegExp(`^${queueCmd} (cl(ear)?( )?)$`, 'gi'))) {
+  if (msgBody.match(new RegExp(`^cl(ear)?( )?$`, 'gi'))) {
     return Command.Clear
   }
-  if (msgBody.match(new RegExp(`^${queueCmd} (r(m|emove)?|d(el(ete)?)?) `, 'gi'))) {
+  if (msgBody.match(new RegExp(`^(r(m|emove)?|d(el(ete)?)?)( )`, 'gi'))) {
     return Command.Remove
   }
-  if (msgBody.match(new RegExp(`^${queueCmd} (a(dd)?) `, 'gi'))) {
+  if (msgBody.match(new RegExp(`^a(dd)?( )`, 'gi'))) {
     return Command.Add
   }
-  if (msgBody.match(new RegExp(`^${queueCmd} (e(dit)?|u(pdate)?|c(hange)?|m(odify)?) `, 'gi'))) {
+  if (msgBody.match(new RegExp(`^(e(dit)?|u(pdate)?|c(hange)?|m(odify)?)( )`, 'gi'))) {
     return Command.Edit
   }
-  if (msgBody.match(new RegExp(`^${queueCmd} (t(okens?|ip)?(-?cost)?|cost|price)( )?$`, 'gi'))) {
+  if (msgBody.match(new RegExp(`^(t(okens?|ip)?(-?cost)?|cost|price)( )?$`, 'gi'))) {
     return Command.TipCost
   }
-  if (msgBody.match(new RegExp(`^${queueCmd} (cred(it)?s?|req(uest)?s?)`, 'gi'))) {
+  if (msgBody.match(new RegExp(`^(cred(it)?s?|req(uest)?s?)`, 'gi'))) {
     return Command.Credits
   }
-  if (msgBody.match(new RegExp(`^${queueCmd} (help|h)( )?$`, 'gi'))) {
+  if (msgBody.match(new RegExp(`^(h(elp)?)`, 'gi'))) {
     return Command.Help
   }
   return ''
 }
 
-function parseCmdArgsFromMsg(cmd, msgBody) {
+function msgParseCmdArgs(cmd, msgBody) {
   if (!cmd || !msgBody) {
     return []
   }
@@ -158,11 +173,11 @@ function getTipCost() {
   return `Tip ${pl('token', $settings.reqTipNumTokens)} to request a song`
 }
 
-function isMsgValidSongRequest(msgBody) {
-  if (!msgBody || typeof msgBody !== 'string') {
+function isMsgValidSongRequest(songRecMsgBody) {
+  if (!songRecMsgBody || typeof songRecMsgBody !== 'string') {
     return false
   }
-  return !msgBody.match(songRecChatMsgPattern, 'gi')
+  return songRecMsgBody.match(new RegExp(songRecChatMsgPattern, 'gi'))
 }
 
 function canUserAddReq(username, hasPriv) {
@@ -197,21 +212,21 @@ function cmdNextSongInQueue(msgPosition = 1, hasPriv) {
 }
 
 function cmdAddUserReq(msgUsername, msgSongName, hasQueuePriv, hasCreditPriv) {
-  if (!$settings.addRequestViaCmd && !hasQueuePriv) {
+  if (!$settings.addRequestViaCmdEnabled && !hasQueuePriv) {
     return 'You are not permitted to use this command'
   }
   return addUserReq(msgUsername, msgSongName, false, hasQueuePriv, hasCreditPriv)
 }
 
 function tipAddUserReq(msgUsername, tipText, isAnon) {
-  if (!$settings.addRequestViaTip) {
+  if (!$settings.addRequestViaTipEnabled) {
     return 'Not permitted to request songs via tip message'
   }
   return addUserReq(msgUsername, tipText, isAnon, false, false)
 }
 
 function msgAddUserReq(msgUsername, msgSongName) {
-  if (!$settings.addRequestViaChatMsg) {
+  if (!$settings.addRequestViaChatMsgEnabled) {
     return 'Not permitted to request songs via chat message'
   }
   return addUserReq(msgUsername, msgSongName, false, false, false)
@@ -241,11 +256,17 @@ function cmdRemoveFromQueue(msgUsername, msgPosition, hasPriv) {
 
 // todo: shares a lot of similar code as `removeFromQueue`
 function cmdEditQueue(msgUsername, msgPosition, msgSong, hasPriv) {
+  if (!$settings.reqEditable && !hasPriv) {
+    return 'Not permitted to edit the queue'
+  }
   const username = formatUsername(msgUsername)
   const songName = formatSongName(msgSong)
   const pos = parseIntFromInput(msgPosition) - 1
   const queue = getQueue()
 
+  if (!songName) {
+    return `Please provide a new song name`
+  }
   if (pos < 0) {
     return `Please provide a valid position in the queue (tried to use ${msgPosition})`
   }
@@ -264,9 +285,9 @@ function cmdEditQueue(msgUsername, msgPosition, msgSong, hasPriv) {
     isAnon: songItem.isAnon,
   })
   if (!success) {
-    return `Unknown app kv storage error updating ${songItem.song} to be ${songName}`
+    return `Unknown app kv storage error updating "${songItem.song}" to be "${songName}"`
   }
-  return `Song #${pos + 1} changed from ${songItem.song} to ${songName}`
+  return `Song #${pos + 1} changed from "${songItem.song}" to "${songName}"`
 }
 
 function cmdDeleteQueue(hasPriv) {
@@ -319,8 +340,8 @@ function cmdRequestCredits(msgUsername, msgArgUsername, msgArgCredits, hasPriv) 
 
 function tipAddRequestCredits(username) {
   const usernameToCredit = formatUsername(username)
-  const creditsToGive = $settings.reqsGivenPerTip || 1
-  const newCredits = incrUserReqCredits(usernameToCredit, creditsToGive)
+  const credits = formatCredits($settings.reqCreditsGivenPerTip)
+  const newCredits = incrUserReqCredits(usernameToCredit, credits)
   return `You now have ${pl('song request credit', newCredits)}`
 }
 
@@ -340,8 +361,11 @@ function getCheckNextMsgKey(username) {
 }
 
 function getQueueKey(id) {
-  if (!id || typeof id !== 'string') {
+  if (!id) {
     id = ''
+  }
+  if (typeof id !== 'string') {
+    id = `${id}`
   }
   if (id.indexOf(queueKeyPrefix) === 0) {
     return id
@@ -382,11 +406,11 @@ function addUserReq(msgUsername, msgSongName, isAnon, hasQueuePriv, hasCreditPri
     song: songName,
     isAnon: !!isAnon,
   })
-  if (!hasCreditPriv) {
+  if (!hasCreditPriv && $settings.reqTipNumTokens) {
     $kv.decr(username)
   }
   setCheckNextMsgForSong(username, false)
-  return `${songName} added to queue`
+  return `"${songName}" added to queue`
 }
 
 function getUserReqCredits(username) {
@@ -395,12 +419,18 @@ function getUserReqCredits(username) {
 }
 
 function incrUserReqCredits(username, credits) {
+  let existingCredits = 0
   try {
-    $kv.get(username)
+    existingCredits = $kv.get(username)
   } catch (e) {
     $kv.set(username, 0)
   }
-  $kv.incr(username, credits)
+  if (existingCredits + credits >= MAX_CREDITS_PER_USER) {
+    $kv.set(username, MAX_CREDITS_PER_USER)
+  } else {
+    $kv.incr(username, credits)
+  }
+  
   return $kv.get(username)
 }
 
@@ -414,7 +444,7 @@ function setUserReqCredits(username, credits) {
 }
 
 function shouldCheckMsgForSong(username) {
-  if (!$settings.addRequestViaChatMsg) {
+  if (!$settings.addRequestViaChatMsgEnabled) {
     return false
   }
   const key = getCheckNextMsgKey(username)
@@ -433,6 +463,46 @@ function setCheckNextMsgForSong(username, check = false) {
 }
 
 // help messages
+function cmdGetHelp(msgBody) {
+  const helpCmd = parseCmd(msgBody)
+  if (msgBody && helpCmd && helpMore[helpCmd]) {
+    let helpMoreMsg = helpMore[helpCmd]
+    if (Array.isArray(helpMoreMsg)) {
+      helpMoreMsg = helpMoreMsg.join('\n')
+    }
+    return `Music Queue Help: ${helpCmd}\n${helpMoreMsg}`
+  }
+  return [
+    help.usage,
+    help[Command.Show],
+    help[Command.Next],
+    help.stillConfused,
+  ].join('\n')
+}
+
 const help = {
-  chatMsg: ''
+  usage: 'Music Queue Usage:\n/queue [next | add <song name> | edit <position> <new song> | remove <position> | clear | credit [username] [credits] | cost | help [command]]',
+  stillConfused: 'You can use `/queue help <command>` for more information about a command',
+  [Command.Show]: '/queue - Show the current songs in queue.',
+  [Command.Next]: '/queue next - Moves queue forward one song',
+  [Command.Add]: '/queue add <song name> - Adds a song request to the queue',
+  chatMsg: 'Your next chat message will be your song request if it matches the format <song name> by <artist name> or <song name> - <artist name>',
+}
+
+const helpMore = {
+  [Command.Next]: [
+    '/queue next',
+    'Moves queue forward one song',
+    'Example:',
+    '/queue next',
+    'Notice: The next song is Zero by The Smashing Pumpkins',
+  ],
+  [Command.Add]: [
+    '/queue add <song name>',
+    'Adds a song request to the queue',
+    'Fails if you do not satisfy song request requirements (i.e. you have not tipped to request a song yet)',
+    'Example:',
+    '/queue add don\'t fade away by beach fossils',
+    'Notice: don\'t fade away by beach fossils added to queue (#2)',
+  ]
 }
