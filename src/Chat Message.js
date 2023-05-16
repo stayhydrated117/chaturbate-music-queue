@@ -38,6 +38,9 @@ if (cmd) {
     case Command.TipCost:
       noticeText = getTipCost()
       break
+    case Command.Version:
+      noticeText = cmdGetAppVersion()
+      break
     case Command.Help:
       noticeText = cmdGetHelp(cmdArgs[0])
       break
