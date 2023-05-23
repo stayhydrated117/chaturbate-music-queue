@@ -1,6 +1,6 @@
 const queueCmd = '/q(ueue)?'
 const Command = Object.freeze({
-  Show: 'Show',
+  Queue: 'Queue',
   Next: 'Next',
   Add: 'Add',
   Remove: 'Remove',
@@ -8,7 +8,6 @@ const Command = Object.freeze({
   Clear: 'Clear',
   TipCost: 'TipCost',
   Credits: 'Credits',
-  Version: 'Version',
   Help: 'Help',
 })
 const songRecChatMsgPattern = '.* (-|by) .*'
@@ -37,7 +36,7 @@ function formatUsername(username) {
 }
 
 function formatCredits(credits) {
-  const creditsInt = parseIntFromUserInput(credits)
+  const creditsInt = parseIntFromInput(credits)
   return creditsInt > -1 ? Math.min(creditsInt, MAX_CREDITS_PER_USER) : 0
 }
 
@@ -85,8 +84,8 @@ function parseCmd(msgBody) {
     .trim()
   )
 
-  if (msgBody.match(new RegExp(`^(s(how)?|l(s|ist)?)?( )?$`, 'gi'))) {
-    return Command.Show
+  if (!msgBody) {
+    return Command.Queue
   }
   if (msgBody.match(new RegExp(`^n(ext)?( )?$`, 'gi'))) {
     return Command.Next
@@ -109,9 +108,6 @@ function parseCmd(msgBody) {
   if (msgBody.match(new RegExp(`^(cred(it)?s?|req(uest)?s?)`, 'gi'))) {
     return Command.Credits
   }
-  if (msgBody.match(new RegExp(`^(v(er(sion)?)?s?)( )?$`, 'gi'))) {
-    return Command.Version
-  }
   if (msgBody.match(new RegExp(`^(h(elp)?)`, 'gi'))) {
     return Command.Help
   }
@@ -126,7 +122,7 @@ function msgParseCmdArgs(cmd, msgBody) {
   return msgParts.slice(2)
 }
 
-function parseIntFromUserInput(input) {
+function parseIntFromInput(input) {
   if (typeof input === 'number') {
     return input
   }
@@ -177,10 +173,6 @@ function getTipCost() {
   return `Tip ${pl('token', $settings.reqTipNumTokens)} to request a song`
 }
 
-function getAppVersion() {
-  return $app.version
-}
-
 function isMsgValidSongRequest(songRecMsgBody) {
   if (!songRecMsgBody || typeof songRecMsgBody !== 'string') {
     return false
@@ -207,7 +199,7 @@ function cmdNextSongInQueue(msgPosition = 1, hasPriv) {
   if (!queue.length) {
     return 'No next song - the queue is empty'
   }
-  const pos = parseIntFromUserInput(msgPosition) - 1
+  const pos = parseIntFromInput(msgPosition) - 1
   if (pos < 0) {
     return `Please provide a valid position in the queue (tried to use ${msgPosition})`
   }
@@ -220,21 +212,21 @@ function cmdNextSongInQueue(msgPosition = 1, hasPriv) {
 }
 
 function cmdAddUserReq(msgUsername, msgSongName, hasQueuePriv, hasCreditPriv) {
-  if (!$settings.addReqViaCmdAllowed && !hasQueuePriv) {
+  if (!$settings.addRequestViaCmd && !hasQueuePriv) {
     return 'You are not permitted to use this command'
   }
   return addUserReq(msgUsername, msgSongName, false, hasQueuePriv, hasCreditPriv)
 }
 
 function tipAddUserReq(msgUsername, tipText, isAnon) {
-  if (!$settings.addReqViaTipMsgAllowed) {
+  if (!$settings.addRequestViaTipMsg) {
     return 'Not permitted to request songs via tip message'
   }
   return addUserReq(msgUsername, tipText, isAnon, false, false)
 }
 
 function msgAddUserReq(msgUsername, msgSongName) {
-  if (!$settings.addReqViaChatMsgAllowed) {
+  if (!$settings.addRequestViaChatMsg) {
     return 'Not permitted to request songs via chat message'
   }
   return addUserReq(msgUsername, msgSongName, false, false, false)
@@ -242,7 +234,7 @@ function msgAddUserReq(msgUsername, msgSongName) {
 
 function cmdRemoveFromQueue(msgUsername, msgPosition, hasPriv) {
   const username = formatUsername(msgUsername)
-  const pos = parseIntFromUserInput(msgPosition) - 1
+  const pos = parseIntFromInput(msgPosition) - 1
   const queue = getQueue()
 
   if (pos < 0) {
@@ -269,7 +261,7 @@ function cmdEditQueue(msgUsername, msgPosition, msgSong, hasPriv) {
   }
   const username = formatUsername(msgUsername)
   const songName = formatSongName(msgSong)
-  const pos = parseIntFromUserInput(msgPosition) - 1
+  const pos = parseIntFromInput(msgPosition) - 1
   const queue = getQueue()
 
   if (!songName) {
@@ -348,13 +340,9 @@ function cmdRequestCredits(msgUsername, msgArgUsername, msgArgCredits, hasPriv) 
 
 function tipAddRequestCredits(username) {
   const usernameToCredit = formatUsername(username)
-  const credits = formatCredits($settings.reqCreditsGivenPerTip)
+  const credits = formatCredits($settings.reqCreditsPerTip)
   const newCredits = incrUserReqCredits(usernameToCredit, credits)
   return `You now have ${pl('song request credit', newCredits)}`
-}
-
-function cmdGetAppVersion() {
-  return `Music Queue Version ${getAppVersion()}`
 }
 
 // kv
@@ -456,7 +444,7 @@ function setUserReqCredits(username, credits) {
 }
 
 function shouldCheckMsgForSong(username) {
-  if (!$settings.addReqViaChatMsgAllowed) {
+  if (!$settings.addRequestViaChatMsg) {
     return false
   }
   const key = getCheckNextMsgKey(username)
@@ -475,18 +463,33 @@ function setCheckNextMsgForSong(username, check = false) {
 }
 
 // help messages
-const help = {
-  usage: 'Music Queue:',
-  credits: 'Made with ❤️ by stayhydrated117',
-  stillConfused: 'You can use `/queue help <command>` for more information about a command',
-  chatMsg: 'Your next chat message will be your song request if it matches the format <song name> by <artist name> or <song name> - <artist name>',
-  [Command.Show]: '/queue - Show the current songs in queue.',
-  [Command.Next]: '/queue next - Moves queue forward one song',
-  [Command.Add]: '/queue add <song name> - Adds a song request to the queue',
-  [Command.Version]: '/queue version - Show the version number of the app',
+function cmdGetHelp(msgBody) {
+  const helpCmd = parseCmd(msgBody)
+  if (helpCmd && helpCmd !== Command.Queue && helpMore[helpCmd]) {
+    let helpMoreMsg = helpMore[helpCmd]
+    if (Array.isArray(helpMoreMsg)) {
+      helpMoreMsg = helpMoreMsg.join('\n')
+    }
+    return `Music Queue Help: ${helpCmd}\n${helpMoreMsg}`
+  }
+  return [
+    help.usage,
+    help[Command.Queue],
+    help[Command.Next],
+    help.stillConfused,
+  ].join('\n')
 }
 
-const cmdHelpMsg = {
+const help = {
+  usage: 'Music Queue Usage:\n/queue [next | add <song name> | edit <position> <new song> | remove <position> | clear | credit [username] [credits] | cost | help [command]]',
+  stillConfused: 'You can use `/queue help <command>` for more information about a command',
+  [Command.Queue]: '/queue - Show the current songs in queue.',
+  [Command.Next]: '/queue next - Moves queue forward one song',
+  [Command.Add]: '/queue add <song name> - Adds a song request to the queue',
+  chatMsg: 'Your next chat message will be your song request if it matches the format <song name> by <artist name> or <song name> - <artist name>',
+}
+
+const helpMore = {
   [Command.Next]: [
     '/queue next',
     'Moves queue forward one song',
@@ -503,29 +506,3 @@ const cmdHelpMsg = {
     'Notice: don\'t fade away by beach fossils added to queue (#2)',
   ]
 }
-
-const defaultHelp = [
-  help.usage,
-  help.credits,
-  help[Command.Show],
-  help[Command.Next],
-  help[Command.Add],
-  $settings.reqEditable && help[Command.Edit],
-  help[Command.Remove],
-  help[Command.Clear],
-  help[Command.Version],
-  help.stillConfused,
-].filter(Boolean).join('\n')
-
-function cmdGetHelp(msgBody) {
-  const helpCmd = parseCmd(msgBody)
-  const helpMore = cmdHelpMsg[helpCmd]
-  if (msgBody && helpCmd && helpMore) {
-    return [
-      `${help.usage} ${helpCmd}`,
-      ...(Array.isArray(helpMore) ? helpMore : [helpMore]),
-    ].join('\n')
-  }
-  return defaultHelp
-}
-

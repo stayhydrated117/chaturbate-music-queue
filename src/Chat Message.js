@@ -11,7 +11,7 @@ let isNoticePublic = false
 
 if (cmd) {
   switch (cmd) {
-    case Command.Show:
+    case Command.Queue:
       noticeText = cmdGetQueue()
       isNoticePublic = canEditQueue
       break
@@ -38,14 +38,12 @@ if (cmd) {
     case Command.TipCost:
       noticeText = getTipCost()
       break
-    case Command.Version:
-      noticeText = cmdGetAppVersion()
-      break
     case Command.Help:
       noticeText = cmdGetHelp(cmdArgs[0])
       break
   }
 }
+
 if (shouldCheckMsgForSong($user.username)) {
   if (!cmd && isMsgValidSongRequest(msgBody)) {
     noticeText = msgAddUserReq($user.username, msgBody)

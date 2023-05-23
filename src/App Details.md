@@ -10,18 +10,17 @@ Version:
 
 Summary:
 ```
-Keep track of user's song requests so you can focus on all the other types of requests 😉
-Pairs well with "song request" tip rewards 🎶
+Automatically add song requests to a queue 🎶
 ```
 
 Description:
 ```
-If you allow viewers to request songs on your streams, then you already know how difficult it can be to locate where the user actually wrote their request (was it in the tip note? maybe written in chat at one point but is now lost in a sea of very polite, non-demanding chat messages? perhaps they tipped but then got distracted). The Music Queue keeps track of users' song requests by automatically adding them to a queue so it's easy for you as the broadcaster to always know what song to play next.
+Keeping track of song requests can be difficult (was it in a tip note? maybe written in chat at one point but is now lost in a sea of very polite, non-demanding chat messages?). Music Queue keeps track of users' song requests by adding them to a list so it's easy for you as the broadcaster to always know what song to play next.
 
-There are 3 ways song requests can be added to the queue (each of which can be enabled/disabled through app settings):
-- include song request in the request a song tip note
-- use the `/queue add <song name>` command
-- use the next chat message after tipping as the song request 
+There are 3 ways a song can be added to the queue (each can be enabled/disabled):
+- include the song request in the tip note
+- send a chat message with the song request immediately after tipping
+- use the `/queue add <song name>` command (more info below)
 
 Common Commands:
 

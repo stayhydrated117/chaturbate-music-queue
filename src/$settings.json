@@ -7,8 +7,8 @@
     "Default": 100,
     "Min": 0
   },
-  "reqCreditsGivenPerTip": {
-    "Variable Name": "reqCreditsGivenPerTip",
+  "reqCreditsPerTip": {
+    "Variable Name": "reqCreditsPerTip",
     "Title": "Song Requests per Tip",
     "Description": "Number of song requests credits a user is given per song req tip",
     "Type": "Number",
@@ -44,22 +44,22 @@
     "Type": "Boolean",
     "Default": false
   },
-  "addRequestViaTipMsgEnabled": {
-    "Variable Name": "addRequestViaTipMsgEnabled",
+  "addRequestViaTipMsg": {
+    "Variable Name": "addRequestViaTipMsg",
     "Title": "Add Song from Tip Message Enabled",
     "Description": "Allow users to add their request by tip message",
     "Type": "Boolean",
     "Default": true
   },
-  "addRequestViaChatMsgEnabled": {
-    "Variable Name": "addRequestViaChatMsgEnabled",
+  "addRequestViaChatMsg": {
+    "Variable Name": "addRequestViaChatMsg",
     "Title": "Add Song from Chat Message Enabled",
     "Description": "Next message the user sends after tipping will be their request",
     "Type": "Boolean",
     "Default": true
   },
-  "addRequestViaCmdEnabled": {
-    "Variable Name": "addRequestViaCmdEnabled",
+  "addRequestViaCmd": {
+    "Variable Name": "addRequestViaCmd",
     "Title": "Add Song from `/queue add` Command Enabled",
     "Description": "Users may use the `/queue add` command (if they have tipped)",
     "Type": "Boolean",
